@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Install comfy-cli
-RUN pip3 install comfy-cli
+RUN pip install comfy-cli
 
 # Install ComfyUI
 RUN /usr/bin/yes | comfy --workspace /comfyui install --cuda-version 11.8 --nvidia --version 0.2.7
@@ -33,7 +33,9 @@ RUN /usr/bin/yes | comfy --workspace /comfyui install --cuda-version 11.8 --nvid
 WORKDIR /comfyui
 
 # Install runpod
-RUN pip3 install runpod requests
+RUN pip install runpod requests
+
+RUN pip install b2sdk
 
 # Install dependencies from requirements.txt
 COPY requirements.txt .
@@ -66,8 +68,6 @@ ARG MODEL_TYPE
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
-
-RUN pip3 install b2sdk
 
 ### Check for custom nodes 'requirements.txt' files and then run install
 # RUN pip3 install -r "/comfyui/custom_nodes/comfyui_layerstyle/requirements.txt";

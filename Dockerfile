@@ -70,9 +70,9 @@ WORKDIR /comfyui
 RUN pip3 install b2sdk
 
 ### Check for custom nodes 'requirements.txt' files and then run install
-RUN pip3 install --no-cache-dir -r "/comfyui/custom_nodes/comfyui_layerstyle/requirements.txt";
-RUN pip3 install --no-cache-dir -r "/comfyui/custom_nodes/comfyui-florence2/requirements.txt";
-RUN pip3 install --no-cache-dir -r "/comfyui/custom_nodes/comfyui-impact-pack/requirements.txt";
+RUN pip3 install -r "/comfyui/custom_nodes/comfyui_layerstyle/requirements.txt";
+RUN pip3 install -r "/comfyui/custom_nodes/comfyui-florence2/requirements.txt";
+RUN pip3 install -r "/comfyui/custom_nodes/comfyui-impact-pack/requirements.txt";
 
 
 # Create necessary directories

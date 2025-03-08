@@ -1,5 +1,4 @@
 import runpod
-from runpod.serverless.utils import rp_upload
 import json
 import urllib.request
 import urllib.parse
@@ -8,6 +7,9 @@ import os
 import requests
 import base64
 from io import BytesIO
+from PIL import Image, ImageFilter
+from b2sdk.v2 import B2Api, InMemoryAccountInfo
+import hashlib
 
 # Time to wait between API check attempts in milliseconds
 COMFY_API_AVAILABLE_INTERVAL_MS = 50
@@ -100,6 +102,17 @@ def check_server(url, retries=500, delay=50):
     return False
 
 
+def download_image(url):
+    """Download image from URL and return as bytes"""
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.content
+    except Exception as e:
+        print(f"Error downloading image from URL: {str(e)}")
+        return None
+
+
 def upload_images(images):
     """
     Upload a list of base64 encoded images to the ComfyUI server using the /upload/image endpoint.
@@ -122,7 +135,14 @@ def upload_images(images):
     for image in images:
         name = image["name"]
         image_data = image["image"]
-        blob = base64.b64decode(image_data)
+        if isinstance(image_data, str) and (image_data.startswith('http://') or image_data.startswith('https://')):
+            # 如果是URL，下载图片
+            blob = download_image(image_data)
+            if blob is None:
+                return []
+        else:
+            # 原有的base64逻辑
+            blob = base64.b64decode(image_data)
 
         # Prepare the form data
         files = {
@@ -200,6 +220,45 @@ def base64_encode(img_path):
         return f"{encoded_string}"
 
 
+def upload_to_b2(local_file_path, file_name):
+    """
+    Upload a file to Backblaze B2 using b2sdk.
+    
+    Args:
+        local_file_path (str): Path to the local file
+        file_name (str): Name to use in B2 (including any path)
+        
+    Returns:
+        str: URL of the uploaded file
+    """
+    try:
+        # B2 setup
+        info = InMemoryAccountInfo()
+        b2_api = B2Api(info)
+        application_key_id = os.environ.get('BUCKET_ACCESS_KEY_ID')
+        application_key = os.environ.get('BUCKET_SECRET_ACCESS_KEY')
+        endpoint_url = os.environ.get("BUCKET_ENDPOINT_URL", '')
+        b2_api.authorize_account("production", application_key_id, application_key)
+
+        # Get bucket
+        bucket_name = os.environ.get('BUCKET_NAME')
+        bucket = b2_api.get_bucket_by_name(bucket_name)
+        
+        # Upload file
+        uploaded_file = bucket.upload_local_file(
+            local_file=local_file_path,
+            file_name=file_name
+        )
+        
+        # Construct download URL
+        download_url = f"{endpoint_url}/{bucket_name}/{file_name}"
+        return download_url
+    
+    except Exception as e:
+        print(f"runpod-worker-comfy - error uploading to B2: {str(e)}")
+        return None
+
+
 def process_output_images(outputs, job_id):
     """
     This function takes the "outputs" from image generation and the job ID,
@@ -248,12 +307,45 @@ def process_output_images(outputs, job_id):
 
     # The image is in the output folder
     if os.path.exists(local_image_path):
-        if os.environ.get("BUCKET_ENDPOINT_URL", False):
-            # URL to image in AWS S3
-            image = rp_upload.upload_image(job_id, local_image_path)
+        if os.environ.get("BUCKET_ACCESS_KEY_ID", False):
+            # 上传原始图片到 B2
+            b2_file_path = f"{job_id}/{os.path.basename(local_image_path)}"
+            image = upload_to_b2(local_image_path, b2_file_path)
+            result = {
+                "status": "success",
+                "message": image
+                #"blur": None
+            }
+            
+            # 处理模糊版本
+            try:
+                # 创建模糊版本的文件名
+                original_filename = os.path.basename(local_image_path)
+                filename, ext = os.path.splitext(original_filename)
+                blur_filename = hashlib.md5(original_filename.encode()).hexdigest() + ext
+                local_blur_image_path = os.path.join(os.path.dirname(local_image_path), blur_filename)
+                
+                # 模糊处理
+                with Image.open(local_image_path) as img:
+                    blurred = img.filter(ImageFilter.GaussianBlur(radius=5))
+                    blurred.save(local_blur_image_path)
+                
+                # 上传模糊版本到 B2
+                b2_blur_path = f"{job_id}/{blur_filename}"
+                blur_image = upload_to_b2(local_blur_image_path, b2_blur_path)
+                #result["blur"] = blur_image
+                print(f"runpod-worker-comfy - blurred image uploaded to B2: {blur_image}")
+                
+                # 清理临时文件
+                if os.path.exists(local_blur_image_path):
+                    os.remove(local_blur_image_path)
+            except Exception as e:
+                print(f"runpod-worker-comfy - error processing blurred image: {str(e)}")
+            
             print(
-                "runpod-worker-comfy - the image was generated and uploaded to AWS S3"
+                "runpod-worker-comfy - the image was generated and uploaded to B2"
             )
+            return result
         else:
             # base64 image
             image = base64_encode(local_image_path)
@@ -261,10 +353,10 @@ def process_output_images(outputs, job_id):
                 "runpod-worker-comfy - the image was generated and converted to base64"
             )
 
-        return {
-            "status": "success",
-            "message": image,
-        }
+            return {
+                "status": "success",
+                "message": image,
+            }
     else:
         print("runpod-worker-comfy - the image does not exist in the output folder")
         return {

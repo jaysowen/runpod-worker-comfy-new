@@ -35,6 +35,10 @@ WORKDIR /comfyui
 # Install runpod
 RUN pip install runpod requests
 
+# Install dependencies from requirements.txt
+# COPY requirements.txt .
+# RUN pip install -r requirements.txt
+
 # Support for the network volume
 ADD src/extra_model_paths.yaml ./
 
@@ -62,6 +66,16 @@ ARG MODEL_TYPE
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui
+
+RUN pip install b2sdk
+
+### Check for custom nodes 'requirements.txt' files and then run install
+RUN for dir in /comfyui/custom_nodes/*/; do \
+    if [ -f "$dir/requirements.txt" ]; then \
+        pip install --no-cache-dir -r "$dir/requirements.txt"; \
+    fi; \
+done
+
 
 # Create necessary directories
 RUN mkdir -p models/checkpoints models/vae

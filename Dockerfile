@@ -37,7 +37,7 @@ RUN pip3 install runpod requests
 
 # Install dependencies from requirements.txt
 COPY requirements.txt .
-RUN pip install -r requirements.txt --continue-on-error
+RUN cat requirements.txt | xargs -n 1 -I {} sh -c "pip install {} || echo 'continue error: {}'"
 
 # Support for the network volume
 ADD src/extra_model_paths.yaml ./

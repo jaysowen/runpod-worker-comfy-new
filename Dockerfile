@@ -38,8 +38,8 @@ RUN pip install runpod requests
 RUN pip install b2sdk
 
 # Install dependencies from requirements.txt
-COPY requirements.txt .
-RUN cat requirements.txt | xargs -n 1 -I {} sh -c "pip install {} || echo 'continue error: {}'"
+# COPY requirements.txt .
+# RUN cat requirements.txt | xargs -n 1 -I {} sh -c "pip install {} || echo 'continue error: {}'"
 
 # Support for the network volume
 ADD src/extra_model_paths.yaml ./

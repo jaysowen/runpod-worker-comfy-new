@@ -28,11 +28,13 @@ RUN apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 RUN pip install comfy-cli
 
 # Install ComfyUI
-RUN pip install --upgrade pip && \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 && \
-    git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui && \
-    cd /comfyui && \
-    pip install -r requirements.txt
+RUN /usr/bin/yes | comfy --workspace /comfyui install
+
+# RUN pip install --upgrade pip && \
+#     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126 && \
+#     git clone https://github.com/comfyanonymous/ComfyUI.git /comfyui && \
+#     cd /comfyui && \
+#     pip install -r requirements.txt
 
 # Change working directory to ComfyUI
 WORKDIR /comfyui

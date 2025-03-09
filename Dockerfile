@@ -45,8 +45,8 @@ RUN pip install runpod requests
 RUN pip install b2sdk
 
 # Install dependencies from requirements.txt
-# COPY requirements.txt .
-# RUN cat requirements.txt | xargs -n 1 -I {} sh -c "pip install {} || echo 'continue error: {}'"
+COPY requirements.txt .
+RUN cat requirements.txt | xargs -n 1 -I {} sh -c "pip install {} || echo 'continue error: {}'"
 
 # Support for the network volume
 ADD src/extra_model_paths.yaml ./
@@ -68,7 +68,7 @@ RUN yes N | /restore_snapshot.sh
 CMD ["/start.sh"]
 
 # Stage 2: Download models
-FROM base as downloader
+FROM base AS downloader
 
 ARG HUGGINGFACE_ACCESS_TOKEN
 ARG MODEL_TYPE
@@ -105,7 +105,7 @@ RUN if [ "$MODEL_TYPE" = "sdxl" ]; then \
     fi
 
 # Stage 3: Final image
-FROM base as final
+FROM base AS final
 
 # Copy models from stage 2 to the final image
 COPY --from=downloader /comfyui/models /comfyui/models

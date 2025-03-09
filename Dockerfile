@@ -76,9 +76,9 @@ ARG MODEL_TYPE
 WORKDIR /comfyui
 
 ### Check for custom nodes 'requirements.txt' files and then run install
-RUN pip install -r "/comfyui/custom_nodes/comfyui_layerstyle/requirements.txt";
-RUN pip install -r "/comfyui/custom_nodes/comfyui-florence2/requirements.txt";
-RUN pip install -r "/comfyui/custom_nodes/comfyui-impact-pack/requirements.txt";
+# RUN pip install -r "/comfyui/custom_nodes/comfyui_layerstyle/requirements.txt";
+# RUN pip install -r "/comfyui/custom_nodes/comfyui-florence2/requirements.txt";
+# RUN pip install -r "/comfyui/custom_nodes/comfyui-impact-pack/requirements.txt";
 
 
 # Create necessary directories

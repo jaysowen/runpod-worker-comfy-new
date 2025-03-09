@@ -13,9 +13,6 @@ ENV CMAKE_BUILD_PARALLEL_LEVEL=8
 # Install Python, git and other necessary tools
 RUN apt-get update && apt-get install -y \
     software-properties-common apt-utils \
-    && add-apt-repository ppa:deadsnakes/ppa -y \
-    && apt-get update \
-    && apt-get install -y \
     python3.10 \
     python3-pip \
     git \
@@ -63,7 +60,7 @@ RUN chmod +x /start.sh /restore_snapshot.sh
 ADD *snapshot*.json /
 
 # Restore the snapshot to install custom nodes
-RUN /restore_snapshot.sh
+RUN yes N | /restore_snapshot.sh
 
 # Start container
 CMD ["/start.sh"]

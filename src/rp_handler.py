@@ -25,6 +25,7 @@ COMFY_HOST = "127.0.0.1:8188"
 # see https://docs.runpod.io/docs/handler-additional-controls#refresh-worker
 REFRESH_WORKER = os.environ.get("REFRESH_WORKER", "false").lower() == "true"
 
+IMAGE_FILTER_BLUR_RADIUS = int(os.environ.get("IMAGE_FILTER_BLUR_RADIUS", 8))
 
 def validate_input(job_input):
     """
@@ -327,7 +328,7 @@ def process_output_images(outputs, job_id):
                 
                 # 模糊处理
                 with Image.open(local_image_path) as img:
-                    blurred = img.filter(ImageFilter.GaussianBlur(radius=5))
+                    blurred = img.filter(ImageFilter.GaussianBlur(radius=IMAGE_FILTER_BLUR_RADIUS))
                     blurred.save(local_blur_image_path)
                 
                 # 上传模糊版本到 B2
